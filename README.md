@@ -95,3 +95,7 @@ Detalle completo, instrucciones para reproducir, errores encontrados y capturas:
 ## Uso de IA
 
 Usamos Claude (Anthropic) como apoyo para la guía de la consola, los scripts y la redacción de los README. Nosotros creamos los recursos, ejecutamos los pipelines, corregimos los errores y verificamos los resultados.
+
+## Video
+
+Link: https://youtu.be/zh5qIcKuO38
