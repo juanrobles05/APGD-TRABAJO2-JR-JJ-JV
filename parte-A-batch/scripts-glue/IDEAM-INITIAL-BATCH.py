@@ -35,6 +35,7 @@ df_estaciones = (
     .option("header", "true")
     .option("inferSchema", "true")
     .option("sep", ",")
+    .option("recursiveFileLookup", "true")
     .load(RUTA_S3_ESTACIONES)
 )
 
@@ -43,19 +44,19 @@ df_radiacion_limpio = df_radiacion.withColumn(
     "Fecha_Timestamp",
     F.coalesce(
         F.try_to_timestamp(
-            F.col("Fecha"),
+            F.trim(F.col("Fecha")),
             F.lit("yyyy-MM-dd HH:mm")
         ),
         F.try_to_timestamp(
-            F.col("Fecha"),
+            F.trim(F.col("Fecha")),
             F.lit("dd/MM/yyyy HH:mm")
         ),
         F.try_to_timestamp(
-            F.col("Fecha"),
+            F.trim(F.col("Fecha")),
             F.lit("yyyy-MM-dd")
         ),
         F.try_to_timestamp(
-            F.col("Fecha"),
+            F.trim(F.col("Fecha")),
             F.lit("dd/MM/yyyy")
         )
     )
@@ -68,9 +69,16 @@ df_radiacion_limpio = (
     .withColumn("Mes", F.month(F.col("Fecha_Timestamp")))
 )
 
+# Convertimos el valor de radiación a tipo numérico
+df_radiacion_limpio = df_radiacion_limpio.withColumn(
+    "Valor",
+    F.col("Valor").cast("double")
+)
+
 # Filtramos los datos no válidos
 df_radiacion_limpio = df_radiacion_limpio.filter(
     F.col("Fecha_Timestamp").isNotNull() &
+    F.col("Valor").isNotNull() &
     (F.col("Valor") >= 0) &
     (F.col("Valor") <= 1500)
 )
@@ -79,13 +87,31 @@ df_radiacion_limpio = df_radiacion_limpio.filter(
 df_estaciones_clean = (
     df_estaciones
     .withColumnRenamed("codigo", "CodigoEstacion_sec")
-    .withColumn("CodigoEstacion_sec", F.col("CodigoEstacion_sec").cast(StringType()))
+    .withColumn(
+        "CodigoEstacion_sec",
+        F.trim(F.col("CodigoEstacion_sec").cast(StringType()))
+    )
+    .withColumn(
+        "latitud",
+        F.regexp_replace(F.trim(F.col("latitud")), ",", ".").cast("double")
+    )
+    .withColumn(
+        "longitud",
+        F.regexp_replace(F.trim(F.col("longitud")), ",", ".").cast("double")
+    )
+    .withColumn(
+        "altitud",
+        F.regexp_replace(F.trim(F.col("altitud")), ",", ".").cast("double")
+    )
 )
 
 # Convertir la llave a String en el DataFrame principal
 df_radiacion_limpio = (
     df_radiacion_limpio
-    .withColumn("CodigoEstacion", F.col("CodigoEstacion").cast(StringType()))
+    .withColumn(
+        "CodigoEstacion",
+        F.trim(F.col("CodigoEstacion").cast(StringType()))
+    )
 )
 
 # Realizar el LEFT JOIN con el catálogo de estaciones
@@ -103,6 +129,8 @@ df_enriquecido = df_radiacion_limpio.join(
 )
 
 # Escribimos en formato Parquet particionado por departamento
+df_enriquecido.printSchema()
+
 (
     df_enriquecido.write
     .mode("overwrite")
