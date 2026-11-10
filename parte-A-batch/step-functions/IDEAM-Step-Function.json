@@ -1,0 +1,46 @@
+{
+  "Comment": "Orquestacion de Pipeline Batch IDEAM - Parte A",
+  "StartAt": "Ejecutar_Glue_Inicial",
+  "States": {
+    "Ejecutar_Glue_Inicial": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "IDEAM-INITIAL-BATCH"
+      },
+      "Next": "Ramas_Paralelas_Analiticas"
+    },
+    "Ramas_Paralelas_Analiticas": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "Ejecutar_Rama1_Temporal",
+          "States": {
+            "Ejecutar_Rama1_Temporal": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "IDEAM_RAMA-1"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Ejecutar_Rama2_Geografica",
+          "States": {
+            "Ejecutar_Rama2_Geografica": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "IDEAM_RAMA-2"
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    }
+  }
+}
